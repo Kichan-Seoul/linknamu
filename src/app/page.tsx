@@ -1,8 +1,13 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import ProfileHeader from "@/components/ProfileHeader";
 import LinkCard from "@/components/LinkCard";
+import type { LinkId } from "@/lib/linkIds";
 
-const links = [
+const links: { id: LinkId; label: string; href: string; icon: React.ReactNode }[] = [
   {
+    id: "github",
     label: "깃허브",
     href: "https://github.com/Kichan-Seoul",
     icon: (
@@ -16,6 +21,7 @@ const links = [
     ),
   },
   {
+    id: "blog",
     label: "블로그",
     href: "https://assetstory.net/story",
     icon: (
@@ -24,6 +30,7 @@ const links = [
     ),
   },
   {
+    id: "email",
     label: "이메일",
     href: "mailto:kimkc30@icloud.com",
     icon: (
@@ -35,6 +42,32 @@ const links = [
 ];
 
 export default function Home() {
+  const [counts, setCounts] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch("/api/clicks")
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled && data.counts) {
+          setCounts(data.counts);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleLinkClick = (id: LinkId) => {
+    setCounts((prev) => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }));
+    fetch(`/api/clicks/${id}`, { method: "POST", keepalive: true }).catch(
+      () => {},
+    );
+  };
+
   return (
     <main className="flex flex-1 flex-col items-center px-6 py-20 sm:py-24">
       <div className="flex w-full max-w-[420px] flex-col items-center gap-12">
@@ -46,10 +79,12 @@ export default function Home() {
         <div className="flex w-full flex-col gap-4">
           {links.map((link) => (
             <LinkCard
-              key={link.label}
+              key={link.id}
               label={link.label}
               href={link.href}
               icon={link.icon}
+              count={counts[link.id] ?? 0}
+              onClick={() => handleLinkClick(link.id)}
             />
           ))}
         </div>
